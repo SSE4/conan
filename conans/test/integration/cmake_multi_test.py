@@ -18,6 +18,9 @@ cmake = """
 project(MyHello)
 cmake_minimum_required(VERSION 2.8.12)
 
+# Some cross-building toolchains will define this
+set(CMAKE_FIND_ROOT_PATH "/some/path")
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
 conan_basic_setup()
 
@@ -72,8 +75,8 @@ class CMakeMultiTest(unittest.TestCase):
 
         def prepare_files(files, number):
             # Change language according to build_type, to check
-            orig = "lang = '-DCONAN_LANGUAGE=%s' % self.options.language"
-            replace = "lang = '-DCONAN_LANGUAGE=%s' % (0 if self.settings.build_type=='Debug' else 1)"
+            orig = '"CONAN_LANGUAGE": self.options.language'
+            replace = '"CONAN_LANGUAGE": 0 if self.settings.build_type=="Debug" else 1'
             conanfile = files["conanfile.py"]
             # The test files, surprisingly, dont use build_type
             conanfile = conanfile.replace(orig, replace).replace('"arch"', '"arch", "build_type"')

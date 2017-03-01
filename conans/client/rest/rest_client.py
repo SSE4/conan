@@ -1,9 +1,8 @@
-from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
-    ConanException
+from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
+from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
 from conans.util.files import decode_text, md5sum
@@ -68,7 +67,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester):
+    def __init__(self, output, requester, put_headers=None):
 
         # Set to instance
         self.token = None
@@ -77,6 +76,7 @@ class RestApiClient(object):
         self._output = output
         self.requester = requester
         self._verify_ssl = True
+        self._put_headers = put_headers
 
     @property
     def verify_ssl(self):
@@ -144,14 +144,15 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def get_recipe(self, conan_reference, dest_folder):
+    def get_recipe(self, conan_reference, dest_folder, filter_files_function):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_json(url)
 
-        if CONANFILE not in list(urls.keys()):
-            raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
+        urls = filter_files_function(urls)
+        if not urls:
+            return None
 
         # TODO: Get fist an snapshot and compare files and download only required?
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
@@ -171,7 +172,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files, retry, retry_wait):
+    def upload_conan(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
         """
         the_files: dict with relative_path: content
         """
@@ -183,6 +184,8 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
+        if ignore_deleted_file and ignore_deleted_file in deleted:
+            deleted.remove(ignore_deleted_file)
 
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
@@ -408,13 +411,13 @@ class RestApiClient(object):
     def _file_server_capabilities(self, resource_url):
         auth = None
         dedup = False
-        if resource_url.startswith(self._remote_api_url):
-            urltokens = urlsplit(resource_url)
-            query_string = urltokens[3]
-            if "signature" not in parse_qs(query_string):
-                # If monolithic server, we can use same auth, and server understand dedup
-                auth = self.auth
-                dedup = True
+        urltokens = urlsplit(resource_url)
+        query_string = urltokens[3]
+        parsed_string_dict = parse_qs(query_string)
+        if "signature" not in parsed_string_dict and "Signature" not in parsed_string_dict:
+            # If monolithic server, we can use same auth, and server understand dedup
+            auth = self.auth
+            dedup = True
         return auth, dedup
 
     def download_files(self, file_urls, output=None):
@@ -467,7 +470,7 @@ class RestApiClient(object):
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait)
+                                           retry=retry, retry_wait=retry_wait, headers=self._put_headers)
                 output.writeln("")
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
@@ -479,6 +482,7 @@ class RestApiClient(object):
                 failed.append(filename)
 
         if failed:
-            raise ConanException("Execute upload again to retry upload the failed files: %s" % ", ".join(failed))
+            raise ConanException("Execute upload again to retry upload the failed files: %s"
+                                 % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))

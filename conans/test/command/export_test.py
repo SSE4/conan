@@ -1,6 +1,6 @@
 import unittest
 import os
-from conans.paths import CONANFILE, CONAN_MANIFEST
+from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_DIR
 from conans.util.files import save, load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -54,7 +54,7 @@ class ExportTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '0f623a95e7262a618ad140eb2f959c5f',
+                         'conanfile.py': '05bd2ffe3ff0c35b3a1deede3264a8b6',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -79,7 +79,8 @@ class OpenSSLConan(ConanFile):
         save(os.path.join(self.conan.current_folder, CONANFILE), content)
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
-        self.assertEqual(sorted(os.listdir(reg_path)), [CONANFILE, CONAN_MANIFEST])
+        self.assertEqual(sorted(os.listdir(reg_path)),
+                         [EXPORT_SOURCES_DIR, CONANFILE, CONAN_MANIFEST])
 
         content = """
 from conans import ConanFile
@@ -93,7 +94,8 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
+                         [EXPORT_SOURCES_DIR, 'CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
+                          'helloHello0.h'])
 
         # Now exports being a list instead a tuple
         content = """
@@ -108,7 +110,7 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
+                         [EXPORT_SOURCES_DIR, 'CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
                           'helloHello0.h'])
 
     def test_export_the_same_code(self):
@@ -137,7 +139,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '0f623a95e7262a618ad140eb2f959c5f',
+                         'conanfile.py': '05bd2ffe3ff0c35b3a1deede3264a8b6',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest2.file_sums)
@@ -170,7 +172,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '6b19dfd1241712a6c694c7c397f909ce',
+                         'conanfile.py': 'd98d9dab2d555bfcea77f091762aeffa',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)
