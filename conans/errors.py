@@ -9,6 +9,7 @@
 
 """
 import sys
+import traceback
 
 from contextlib import contextmanager
 
@@ -97,8 +98,11 @@ class ConanException(Exception):
             message = exception_message_safe(msg)
         if self._inner_exception_type:
             inner_exception_str = exception_message_safe(self._inner_exception_instance)
-            message += "\nInnerException {}: {}:\n".format(self._inner_exception_type, inner_exception_str)
-            message += self._inner_exception_traceback
+            message += "\nInnerException {}:\n".format(self._inner_exception_type)
+            message += " ".join(traceback.format_exception(self._inner_exception_type,
+                                                           self._inner_exception_instance,
+                                                           self._inner_exception_traceback))
+            message += "\n{}".format(inner_exception_str)
         return message
 
 
