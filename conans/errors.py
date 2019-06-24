@@ -8,6 +8,8 @@
     see return_plugin.py
 
 """
+import sys
+
 from contextlib import contextmanager
 
 from conans.util.env_reader import get_env
@@ -76,6 +78,9 @@ class ConanException(Exception):
     def __init__(self, *args, **kwargs):
         self.info = None
         self.remote = kwargs.pop("remote", None)
+
+        self._inner_exception_type, self._inner_exception_instance, self._inner_exception_traceback = sys.exc_info()
+
         super(ConanException, self).__init__(*args, **kwargs)
 
     def remote_message(self):
@@ -87,9 +92,14 @@ class ConanException(Exception):
         from conans.util.files import exception_message_safe
         msg = super(ConanException, self).__str__()
         if self.remote:
-            return "{}.{}".format(exception_message_safe(msg), self.remote_message())
-
-        return exception_message_safe(msg)
+            message = "{}.{}".format(exception_message_safe(msg), self.remote_message())
+        else:
+            message = exception_message_safe(msg)
+        if self._inner_exception_type:
+            inner_exception_str = exception_message_safe(self._inner_exception_instance)
+            message += "\nInnerException {}: {}:\n".format(self._inner_exception_type, inner_exception_str)
+            message += self._inner_exception_traceback
+        return message
 
 
 class OnlyV2Available(ConanException):
