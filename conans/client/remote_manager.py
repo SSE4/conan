@@ -240,11 +240,11 @@ class RemoteManager(object):
             logger.info("call", method, *argc, **argv)
             res = getattr(self._auth_manager, method)(*argc, **argv)
             t2 = time.time() - t1
-            logger.info("duration of call", t2)
+            logger.info("duration of call: %s" % str(t2))
             return res
         except ConnectionError as exc:
             t2 = time.time() - t1
-            logger.info("duration of call", t2)
+            logger.info("duration of call: %s" % str(t2))
             logger.error(traceback.format_exc())
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
