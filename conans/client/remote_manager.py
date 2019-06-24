@@ -235,9 +235,16 @@ class RemoteManager(object):
     def _call_remote(self, remote, method, *argc, **argv):
         assert(isinstance(remote, Remote))
         self._auth_manager.remote = remote
+        t1 = time.time()
         try:
-            return getattr(self._auth_manager, method)(*argc, **argv)
+            logger.info("call", method, *argc, **argv)
+            res = getattr(self._auth_manager, method)(*argc, **argv)
+            t2 = time.time() - t1
+            logger.info("duration of call", t2)
+            return res
         except ConnectionError as exc:
+            t2 = time.time() - t1
+            logger.info("duration of call", t2)
             logger.error(traceback.format_exc())
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
