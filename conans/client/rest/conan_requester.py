@@ -7,6 +7,7 @@ import time
 from conans import __version__ as client_version
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
+from conans.util.log import logger
 
 
 class ConanRequester(object):
@@ -103,6 +104,8 @@ class ConanRequester(object):
         try:
             t1 = time.time()
             all_kwargs = self._add_kwargs(url, kwargs)
+
+            logger.info("call method %s on url %s with kwargs %s" % (method, url, all_kwargs))
             tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             duration = time.time() - t1
             log_client_rest_api_call(url, method.upper(), duration, all_kwargs.get("headers"))
