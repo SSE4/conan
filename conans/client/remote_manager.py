@@ -237,7 +237,7 @@ class RemoteManager(object):
         self._auth_manager.remote = remote
         t1 = time.time()
         try:
-            logger.info("call", method, *argc, **argv)
+            logger.info("call method: %s args: %s argv: %s" % (method, argc, argv))
             res = getattr(self._auth_manager, method)(*argc, **argv)
             t2 = time.time() - t1
             logger.info("duration of call: %s" % str(t2))
