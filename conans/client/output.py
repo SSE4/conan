@@ -7,16 +7,71 @@ from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 
 
+def is_tty(stream):
+    return hasattr(stream, "isatty") and stream.isatty()
+
+
+def is_msys_cygwin_tty(stream):
+    # https://github.com/msys2/MINGW-packages/pull/2675/files
+    try:
+        import msvcrt
+        import ctypes
+        import sys
+        import re
+
+        if not hasattr(stream, "fileno"):
+            return False
+
+        if not hasattr(ctypes, "windll") or not hasattr(ctypes.windll.kernel32, "GetFileInformationByHandleEx"):
+            return False
+
+        fileno = stream.fileno()
+        handle = msvcrt.get_osfhandle(fileno)
+        FileNameInfo = 2
+
+        class FILE_NAME_INFO(ctypes.Structure):
+            _fields_ = [('FileNameLength', ctypes.c_ulong),
+                        ('FileName', ctypes.c_wchar * 40)]
+
+        info = FILE_NAME_INFO()
+        ret = ctypes.windll.kernel32.GetFileInformationByHandleEx(handle,
+                                                                  FileNameInfo,
+                                                                  ctypes.byref(info),
+                                                                  ctypes.sizeof(info))
+        if ret == 0:
+            return False
+
+        msys_pattern = r"\\msys-[0-9a-f]{16}-pty\d-(to|from)-master"
+        cygwin_pattern = r"\\cygwin-[0-9a-f]{16}-pty\d-(to|from)-master"
+        print(info.FileName)
+        return re.match(msys_pattern, info.FileName) is not None or \
+            re.match(cygwin_pattern, info.FileName) is not None
+
+    except ImportError:
+        return False
+
+
 def colorama_initialize():
     # Respect color env setting or check tty if unset
     color_set = "CONAN_COLOR_DISPLAY" in os.environ
+
+    print("COLOR")
+    print(Fore.RED + "CYGWIN!!!")
+    print('\033[92m' + 'CYGWIN!!!\n')
+
     if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
             or (not color_set
-                and hasattr(sys.stdout, "isatty")
-                and sys.stdout.isatty())):
+                and (is_tty(sys.stdout) or is_msys_cygwin_tty(sys.stdout)))):
         import colorama
+        print("COLOR")
+        print(Fore.RED + "CYGWIN!!!")
+        sys.stdout.write('\033[92m' + 'CYGWIN!!!\n')
         if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
             colorama.init(convert=False, strip=False)
+        elif is_msys_cygwin_tty(sys.stdout):
+
+            colorama.init()
+            colorama.init(convert=False, strip=False, wrap=False)
         else:
             colorama.init()
         color = True
@@ -68,7 +123,7 @@ class ConanOutput(object):
 
     @property
     def is_terminal(self):
-        return hasattr(self._stream, "isatty") and self._stream.isatty()
+        return is_tty(self._stream) or is_msys_cygwin_tty(self._stream)
 
     def writeln(self, data, front=None, back=None, error=False):
         self.write(data, front, back, newline=True, error=error)
