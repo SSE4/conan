@@ -406,6 +406,39 @@ class PatchConan(ConanFile):
         self.assertNotIn("constant BOOST_VERSION : 1.71.0 ;", content)
         self.assertIn("constant BOOST_VERSION : 1.70.0 ;", content)
 
+    def test_patch2(self):
+        file_content = """X
+Y
+Z
+"""
+        patch_content = """diff --git a/Jamroot b/Jamroot
+index a6981dd..0c08f09 100644
+--- a/Jamroot
++++ b/Jamroot
+@@ -1,3 +1,4 @@
+ X
+ Y
++V
+ W
+"""
+        conanfile_content = """from conans import ConanFile, tools
+class PatchConan(ConanFile):
+    def source(self):
+        tools.patch(self.source_folder, "p1.patch", strip=0)"""
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_content,
+                     "Jamroot": file_content,
+                     "p1.patch": patch_content})
+
+        client.run("source .")
+
+        path = os.path.join(client.current_folder, "Jamroot")
+
+        content = load(path)
+        self.assertNotIn("W", content)
+        self.assertIn("V", content)
+        self.assertIn("Z", content)
 
     @parameterized.expand([(0, ), (1, )])
     def test_patch_from_file(self, strip):
