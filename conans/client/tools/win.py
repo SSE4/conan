@@ -121,6 +121,8 @@ def msvs_toolset(settings):
     if not toolset:
         compiler_version = settings.get_safe("compiler.version")
         if settings.get_safe("compiler") == "intel":
+            compiler_version = compiler_version if "." in compiler_version else \
+                "%s.0" % compiler_version
             toolset = "Intel C++ Compiler " + compiler_version
         else:
             toolset = MSVS_DEFAULT_TOOLSETS.get(compiler_version)
