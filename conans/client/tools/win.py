@@ -119,8 +119,11 @@ MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
 def msvs_toolset(settings):
     toolset = settings.get_safe("compiler.toolset")
     if not toolset:
-        vs_version = settings.get_safe("compiler.version")
-        toolset = MSVS_DEFAULT_TOOLSETS.get(vs_version)
+        compiler_version = settings.get_safe("compiler.version")
+        if settings.get_safe("compiler") == "intel":
+            toolset = "Intel C++ Compiler " + compiler_version
+        else:
+            toolset = MSVS_DEFAULT_TOOLSETS.get(compiler_version)
     return toolset
 
 
@@ -369,8 +372,11 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     arch_setting = arch or conanfile.settings.get_safe("arch")
 
     compiler = conanfile.settings.get_safe("compiler")
+    compiler_base = settings.get_safe("compiler.base")
     if compiler == 'Visual Studio':
         compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
+    elif compiler_base == "Visual Studio":
+        compiler_version = compiler_version or conanfile.settings.get_safe("compiler.base.version")
     else:
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools
