@@ -199,6 +199,7 @@ def vs_installation_path(version, preference=None):
 
     if not preference:
         preference = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
+        print("AAA CONAN_VS_INSTALLATION_PREFERENCE %s" % preference)
         if not preference:  # default values
             preference = ["Enterprise", "Professional", "Community", "BuildTools"]
 
@@ -206,6 +207,9 @@ def vs_installation_path(version, preference=None):
     try:
         legacy_products = vswhere(legacy=True)
         all_products = vswhere(products=["*"])
+        print("AAA legacy products %s" % legacy_products)
+
+        print("AAA all products %s" % all_products)
         products = legacy_products + all_products
     except ConanException:
         products = None
@@ -267,12 +271,15 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     installer_path = None
     program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
+
+    print("AAA program files %s" % program_files)
     if program_files:
         expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                      "vswhere.exe")
         if os.path.isfile(expected_path):
             installer_path = expected_path
     vswhere_path = installer_path or which("vswhere")
+    print("AAA vswhere %s" % vswhere_path)
 
     if not vswhere_path:
         raise ConanException("Cannot locate vswhere in 'Program Files'/'Program Files (x86)' "
@@ -316,8 +323,12 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     if nologo:
         arguments.append("-nologo")
 
+    print("AAA vswhere command: %s" % arguments)
+
     try:
         output = check_output_runner(arguments).strip()
+
+        print("AAA vswhere output: %s" % output)
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -332,6 +343,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 def vs_comntools(compiler_version):
     env_var = "vs%s0comntools" % compiler_version
     vs_path = os.getenv(env_var)
+    print("AAA value of %s = %s" % (env_var, vs_path))
     return vs_path
 
 
@@ -451,6 +463,10 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
         vs_path = vs_installation_path(str(compiler_version))
 
         if not vs_path or not os.path.isdir(vs_path):
+            print("AAA : compiler version %s" % compiler_version)
+            print("AAA : vs path %s" % vs_path)
+            if vs_path:
+                print("AAA: vs path exists %s" % os.path.isdir(vs_path))
             raise ConanException("VS non-existing installation: Visual Studio %s"
                                  % str(compiler_version))
         else:
