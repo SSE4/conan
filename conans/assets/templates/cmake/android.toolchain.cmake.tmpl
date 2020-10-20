@@ -1,0 +1,19 @@
+{%- if conan_helper.settings("os.version") %}
+set(ANDROID_PLATFORM {{ conan_helper.settings("os.version") }})
+set(ANDROID_NATIVE_API_LEVEL {{ conan_helper.settings("os.version") }})
+{%- endif %}
+
+{%- if conan_helper.settings("compiler.libcxx") %}
+set(ANDROID_STL {{ conan_helper.settings("compiler.libcxx") }})
+{%- endif %}
+
+{%- if conan_helper.android_abi(conan_helper.settings("arch")) %}
+set(ANDROID_ABI {{ conan_helper.android_abi(conan_helper.settings("arch")) }})
+{%- endif %}
+
+message(STATUS "ANDROID_PLATFORM ${ANDROID_PLATFORM}")
+message(STATUS "ANDROID_NATIVE_API_LEVEL ${ANDROID_NATIVE_API_LEVEL}")
+message(STATUS "ANDROID_STL ${ANDROID_STL}")
+message(STATUS "ANDROID_ABI ${ANDROID_ABI}")
+
+{% include "generic.toolchain.cmake.tmpl" %}

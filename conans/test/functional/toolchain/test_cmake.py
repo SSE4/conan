@@ -422,3 +422,77 @@ class CMakeInstallTest(unittest.TestCase):
         package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+    def test_android(self):
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8.12)  # TODO: Define minimun required here
+            project(AndroidLibrary CXX)
+            set(CMAKE_VERBOSE_MAKEFILE ON)
+            add_library(library lib.h lib.cpp)
+            set_target_properties(library PROPERTIES PUBLIC_HEADER lib.h)
+            install(TARGETS library
+                RUNTIME DESTINATION bin
+                LIBRARY DESTINATION lib
+                ARCHIVE DESTINATION lib
+                PUBLIC_HEADER DESTINATION include
+            )
+        """)
+
+        lib_h = textwrap.dedent("""
+            int some_function(int value);
+        """)
+
+        lib_cpp = textwrap.dedent("""
+
+            #ifndef __ANDROID__
+            #error must be built for Android!
+            #endif
+
+            #include "lib.h"
+            #include <iostream>
+            int some_function(int value) {
+                std::cout << "some_function(value=" << value << ")" << std::endl;
+                return 42;
+            }
+        """)
+
+        conanfile_py = textwrap.dedent("""
+                from conans import ConanFile, CMake, CMakeToolchain
+                class Library(ConanFile):
+                    name = 'library'
+                    settings = 'os', 'arch', 'compiler', 'build_type'
+                    exports_sources = "CMakeLists.txt", "lib.h", "lib.cpp"
+                    options = {'shared': [True, False]}
+                    default_options = {'shared': False}
+                    def toolchain(self):
+                        tc = CMakeToolchain(self)
+                        tc.write_toolchain_files()
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                    def package(self):
+                        cmake = CMake(self)
+                        cmake.install()
+                """)
+        profile_host = textwrap.dedent("""
+                [settings]
+                os=Android
+                os.api_level=23
+                arch=x86_64
+                compiler=clang
+                compiler.version=9
+                compiler.libcxx=c++_shared
+                build_type=Release
+            """)
+
+        client = TestClient()
+
+        client.save({"conanfile.py": conanfile_py,
+                     "CMakeLists.txt": cmakelists,
+                     "lib.h": lib_h,
+                     "lib.cpp": lib_cpp,
+                     "profile_host": profile_host})
+
+        client.run('create . library/version@ --profile:host=profile_host --profile:build=default')
+        # this is just to fail a test and see the output!
+        self.assertIn("xxxx", client.out)
