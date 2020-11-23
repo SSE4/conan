@@ -222,6 +222,9 @@ class FileCopier(object):
         managing symlinks if necessary
         """
         copied_files = []
+        inodes = [os.stat(os.path.join(src, filename)).st_ino for filename in files]
+        inodes = set([node for node in inodes if inodes.count(node) > 1])
+
         for filename in files:
             abs_src_name = os.path.join(src, filename)
             filename = filename if keep_path else os.path.basename(filename)
@@ -238,6 +241,16 @@ class FileCopier(object):
                     pass
                 os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
             else:
-                shutil.copy2(abs_src_name, abs_dst_name)
+                inode = os.stat(abs_src_name).st_ino
+                if inode in inodes:
+                    try:
+                        os.link(abs_src_name, abs_dst_name)
+                    except OSError as error:
+                        # e.g. OSError: [Errno 18] Invalid cross-device link
+                        raise ConanException(
+                            "Hardlink '{}' pointing to '{}' couldn't be made: {}"
+                            .format(abs_src_name, abs_dst_name, error))
+                else:
+                    shutil.copy2(abs_src_name, abs_dst_name)
             copied_files.append(abs_dst_name)
         return copied_files
