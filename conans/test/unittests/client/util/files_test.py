@@ -24,6 +24,7 @@ def hardlinks_supported():
     finally:
         shutil.rmtree(tmpdir)
 
+
 class FilesTest(unittest.TestCase):
 
     def test_md5_compress(self):
