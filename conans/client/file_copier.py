@@ -4,7 +4,7 @@ import shutil
 from collections import defaultdict
 
 from conans.errors import ConanException
-from conans.util.files import mkdir, walk
+from conans.util.files import mkdir, walk, safe_hardlink
 
 
 def report_copied_files(copied, output, message_suffix="Copied"):
@@ -243,13 +243,7 @@ class FileCopier(object):
             else:
                 inode = os.stat(abs_src_name).st_ino
                 if inode in inodes:
-                    try:
-                        os.link(abs_src_name, abs_dst_name)
-                    except OSError as error:
-                        # e.g. OSError: [Errno 18] Invalid cross-device link
-                        raise ConanException(
-                            "Hardlink '{}' pointing to '{}' couldn't be made: {}"
-                            .format(abs_src_name, abs_dst_name, error))
+                    safe_hardlink(abs_src_name, abs_dst_name)
                 else:
                     shutil.copy2(abs_src_name, abs_dst_name)
             copied_files.append(abs_dst_name)
