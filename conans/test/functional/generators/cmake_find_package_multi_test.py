@@ -12,6 +12,67 @@ from conans.util.files import load
 
 
 @pytest.mark.tool_cmake
+class TestCreateModuleOfficialCMakeTargets:
+    def test_create_module_official_cmake_targets(self):
+        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake, tools
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+
+                @property
+                def _module(self):
+                    return os.path.join(self.package_folder, "lib", "cmake",
+                                        "conan-official-foo-targets.cmake")
+
+                def package(self):
+                    tools.create_cmake_module_alias_targets(self, self._module,
+                        {"hello": "hello::hello"})
+
+                def package_info(self):
+                    self.cpp_info.builddirs = [os.path.dirname(self._module)]
+                    self.cpp_info.build_modules = [self._module]
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake_find_package_multi"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            find_package(hello REQUIRED)
+            get_target_property(link_libraries hello INTERFACE_LINK_LIBRARIES)
+            message("hello link libraries: ${link_libraries}")
+            """)
+
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+
+        assert "hello link libraries: hello::hello" in client.out
+
+
+@pytest.mark.tool_cmake
 class TestCMakeFindPackageMultiGenerator:
 
     @pytest.mark.parametrize("use_components", [False, True])

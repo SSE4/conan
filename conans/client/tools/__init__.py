@@ -3,6 +3,8 @@ from .android import *
 # noinspection PyUnresolvedReferences
 from .apple import *
 # noinspection PyUnresolvedReferences
+from .cmake import *
+# noinspection PyUnresolvedReferences
 from .env import *
 # noinspection PyUnresolvedReferences
 from .files import *
